@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Interactive Map</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <style>
+        #map { height: 500px; width: 100%; }
+        #coordinates { margin-top: 10px; }
+    </style>
+</head>
+<body>
+    <h2>Click on the map to place a marker</h2>
+    <div id="map"></div>
+    <form>
+        <label for="coords">Coordinates:</label>
+        <input type="text" id="coords" readonly>
+    </form>
+    
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script>
+        var map = L.map('map').setView([51.505, -0.09], 13);
+        
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '© OpenStreetMap contributors'
+        }).addTo(map);
+        
+        var marker;
+
+        function updateCoordinates(lat, lng) {
+            document.getElementById('coords').value = `${lat.toFixed(6)}, ${lng.toFixed(6)}`;
+        }
+
+        map.on('click', function(e) {
+            if (marker) {
+                marker.setLatLng(e.latlng);
+            } else {
+                marker = L.marker(e.latlng, { draggable: true }).addTo(map);
+                marker.on('dragend', function(event) {
+                    var position = event.target.getLatLng();
+                    updateCoordinates(position.lat, position.lng);
+                });
+            }
+            updateCoordinates(e.latlng.lat, e.latlng.lng);
+        });
+    </script>
+</body>
+</html>
