@@ -12,6 +12,7 @@
 </head>
 <body>
     <h2>Click on the map to place a marker</h2>
+    <button id="locate">Use My Location</button>
     <div id="map"></div>
     <form>
         <label for="coords">Coordinates:</label>
@@ -43,6 +44,31 @@
                 });
             }
             updateCoordinates(e.latlng.lat, e.latlng.lng);
+        });
+
+        document.getElementById('locate').addEventListener('click', function() {
+            if (navigator.geolocation) {
+                navigator.geolocation.getCurrentPosition(function(position) {
+                    var lat = position.coords.latitude;
+                    var lng = position.coords.longitude;
+                    
+                    if (marker) {
+                        marker.setLatLng([lat, lng]);
+                    } else {
+                        marker = L.marker([lat, lng], { draggable: true }).addTo(map);
+                        marker.on('dragend', function(event) {
+                            var position = event.target.getLatLng();
+                            updateCoordinates(position.lat, position.lng);
+                        });
+                    }
+                    map.setView([lat, lng], 13);
+                    updateCoordinates(lat, lng);
+                }, function(error) {
+                    alert('Geolocation failed: ' + error.message);
+                });
+            } else {
+                alert('Geolocation is not supported by your browser.');
+            }
         });
     </script>
 </body>
