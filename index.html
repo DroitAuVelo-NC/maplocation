@@ -1,75 +1,55 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Interactive Map</title>
-    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-    <style>
-        #map { height: 500px; width: 100%; }
-        #coordinates { margin-top: 10px; }
-    </style>
+  <title>Map with Markers from Google Sheets (OSM)</title>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <!-- Leaflet CSS -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
+  <style>
+    #map { height: 100vh; width: 100%; }
+  </style>
 </head>
 <body>
-    <h2>Click on the map to place a marker</h2>
-    <button id="locate">Use My Location</button>
-    <div id="map"></div>
-    <form>
-        <label for="coords">Coordinates:</label>
-        <input type="text" id="coords" readonly>
-    </form>
-    
-    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-    <script>
-        var map = L.map('map').setView([-22.2758, 166.458], 13);
-        
-        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-            attribution: '© OpenStreetMap contributors'
-        }).addTo(map);
-        
-        var marker;
+  <div id="map"></div>
 
-        function updateCoordinates(lat, lng) {
-            document.getElementById('coords').value = `${lat.toFixed(6)}, ${lng.toFixed(6)}`;
+  <!-- Leaflet JS -->
+  <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+
+  <script>
+    const sheetId = "1VgpK5WnfHnC43DLVSBNW6IqE582BjVBPPbURCNaNSBw";
+    const sheetUrl = `https://docs.google.com/spreadsheets/d/${sheetId}/gviz/tq?tqx=out:json`;
+
+     async function fetchSheetData() {
+          const res = await fetch(sheetUrl);
+          const text = await res.text();
+          const json = JSON.parse(text.substr(47).slice(0, -2));
+          const rows = json.table.rows;
+    
+          return rows.map(row => ({
+            lat: parseFloat(row.c[2]?.v),   // Column C = Latitude
+            lng: parseFloat(row.c[3]?.v),   // Column D = Longitude
+            title: row.c[0]?.v || ""        // Optional: title from Column A
+          })).filter(p => !isNaN(p.lat) && !isNaN(p.lng));
         }
 
-        map.on('click', function(e) {
-            if (marker) {
-                marker.setLatLng(e.latlng);
-            } else {
-                marker = L.marker(e.latlng, { draggable: true }).addTo(map);
-                marker.on('dragend', function(event) {
-                    var position = event.target.getLatLng();
-                    updateCoordinates(position.lat, position.lng);
-                });
-            }
-            updateCoordinates(e.latlng.lat, e.latlng.lng);
-        });
 
-        document.getElementById('locate').addEventListener('click', function() {
-            if (navigator.geolocation) {
-                navigator.geolocation.getCurrentPosition(function(position) {
-                    var lat = position.coords.latitude;
-                    var lng = position.coords.longitude;
-                    
-                    if (marker) {
-                        marker.setLatLng([lat, lng]);
-                    } else {
-                        marker = L.marker([lat, lng], { draggable: true }).addTo(map);
-                        marker.on('dragend', function(event) {
-                            var position = event.target.getLatLng();
-                            updateCoordinates(position.lat, position.lng);
-                        });
-                    }
-                    map.setView([lat, lng], 13);
-                    updateCoordinates(lat, lng);
-                }, function(error) {
-                    alert('Geolocation failed: ' + error.message);
-                });
-            } else {
-                alert('Geolocation is not supported by your browser.');
-            }
-        });
-    </script>
+    async function initMap() {
+      const points = await fetchSheetData();
+      const map = L.map('map').setView([points[0].lat, points[0].lng], 2);
+
+      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '&copy; OpenStreetMap contributors'
+      }).addTo(map);
+
+      points.forEach(p => {
+        L.marker([p.lat, p.lng])
+          .addTo(map)
+          .bindPopup(p.title);
+      });
+    }
+
+    initMap();
+  </script>
 </body>
 </html>
