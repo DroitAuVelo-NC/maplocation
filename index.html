@@ -1,10 +1,9 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>Map with Markers from Google Sheets (OSM)</title>
+  <title>Leaflet Map from Google Sheets JSON</title>
   <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <!-- Leaflet CSS -->
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
   <style>
     #map { height: 100vh; width: 100%; }
@@ -13,30 +12,42 @@
 <body>
   <div id="map"></div>
 
-  <!-- Leaflet JS -->
   <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
 
   <script>
     const sheetId = "1VgpK5WnfHnC43DLVSBNW6IqE582BjVBPPbURCNaNSBw";
     const sheetUrl = `https://docs.google.com/spreadsheets/d/${sheetId}/gviz/tq?tqx=out:json`;
 
-     async function fetchSheetData() {
-          const res = await fetch(sheetUrl);
-          const text = await res.text();
-          const json = JSON.parse(text.substr(47).slice(0, -2));
-          const rows = json.table.rows;
-    
-          return rows.map(row => ({
-            lat: parseFloat(row.c[2]?.v),   // Column C = Latitude
-            lng: parseFloat(row.c[3]?.v),   // Column D = Longitude
-            title: row.c[0]?.v || ""        // Optional: title from Column A
-          })).filter(p => !isNaN(p.lat) && !isNaN(p.lng));
+    async function fetchSheetData() {
+      const res = await fetch(sheetUrl);
+      const text = await res.text();
+      const json = JSON.parse(text.substring(47).slice(0, -2)); // Clean wrapper
+      const rows = json.table.rows;
+
+      // Extract data from relevant columns
+      return rows.map(row => {
+        const lng = parseFloat(row.c[2]?.v);  // "Long"
+        const lat = parseFloat(row.c[3]?.v);  // "Lat"
+        const desc = row.c[4]?.v || "";       // Description
+        const fileUrl = row.c[5]?.v || "";    // Fichier
+
+        let popupContent = `<strong>${desc}</strong>`;
+        if (fileUrl) {
+          popupContent += `<br><a href="${fileUrl}" target="_blank">Voir le fichier</a>`;
         }
 
+        return {
+          lat,
+          lng,
+          popup: popupContent
+        };
+      }).filter(p => !isNaN(p.lat) && !isNaN(p.lng));
+    }
 
     async function initMap() {
       const points = await fetchSheetData();
-      const map = L.map('map').setView([points[0].lat, points[0].lng], 2);
+
+      const map = L.map('map').setView([points[0].lat, points[0].lng], 13);
 
       L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
         attribution: '&copy; OpenStreetMap contributors'
@@ -45,8 +56,12 @@
       points.forEach(p => {
         L.marker([p.lat, p.lng])
           .addTo(map)
-          .bindPopup(p.title);
+          .bindPopup(p.popup);
       });
+
+      // Fit map to all markers
+      const bounds = L.latLngBounds(points.map(p => [p.lat, p.lng]));
+      map.fitBounds(bounds);
     }
 
     initMap();
