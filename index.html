@@ -25,23 +25,27 @@
       const rows = json.table.rows;
 
       // Extract data from relevant columns
-      return rows.map(row => {
-        const lng = parseFloat(row.c[2]?.v);  // "Long"
-        const lat = parseFloat(row.c[3]?.v);  // "Lat"
-        const desc = row.c[4]?.v || "";       // Description
-        const fileUrl = row.c[5]?.v || "";    // Fichier
+return rows.map(row => {
+  const lng = parseFloat(row.c[2]?.v);  // Column C - Longitude
+  const lat = parseFloat(row.c[3]?.v);  // Column D - Latitude
+  const desc = row.c[4]?.v || "";       // Column E - Description
+  const fileUrl = row.c[5]?.v || "";    // Column F - File link
+  const dateStr = row.c[8]?.f || "";    // Column I - Formatted date string
 
-        let popupContent = `<strong>${desc}</strong>`;
-        if (fileUrl) {
-          popupContent += `<br><a href="${fileUrl}" target="_blank">Voir le fichier</a>`;
-        }
+  let popupContent = `<strong>${desc}</strong>`;
+  if (dateStr) {
+    popupContent += `<br><em>${dateStr}</em>`;
+  }
+  if (fileUrl) {
+    popupContent += `<br><a href="${fileUrl}" target="_blank">Voir le fichier</a>`;
+  }
 
-        return {
-          lat,
-          lng,
-          popup: popupContent
-        };
-      }).filter(p => !isNaN(p.lat) && !isNaN(p.lng));
+  return {
+    lat,
+    lng,
+    popup: popupContent
+  };
+}).filter(p => !isNaN(p.lat) && !isNaN(p.lng));
     }
 
     async function initMap() {
